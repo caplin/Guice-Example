@@ -5,7 +5,7 @@ package com.guiceexample;
 
 import java.util.concurrent.Executors;
 
-public class Main implements FXQuoteListener
+public class Application implements FXQuoteListener
 {
 	private final String currencyPair;
 	private final FXQuoteProvider quoteProvider;
@@ -17,12 +17,12 @@ public class Main implements FXQuoteListener
 		
 		FXQuoteProvider quoteProvider = new FXQuoteProvider(Executors.newSingleThreadScheduledExecutor(), auditLogger);
 		
-		Main application = new Main("EURUSD", quoteProvider, auditLogger);
+		Application application = new Application("EURUSD", quoteProvider, auditLogger);
 		
 		application.start();
 	}
 	
-	public Main(String currencyPair, FXQuoteProvider quoteProvider, AuditLogger auditLogger)
+	public Application(String currencyPair, FXQuoteProvider quoteProvider, AuditLogger auditLogger)
 	{
 		this.currencyPair = currencyPair;
 		this.quoteProvider = quoteProvider;
