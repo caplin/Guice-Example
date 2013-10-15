@@ -5,14 +5,22 @@ package com.guiceexample;
 
 public class Main implements FXQuoteListener
 {
-	private final FXQuoteProvider quoteProvider = new FXQuoteProvider();
+	private final String currencyPair;
+	private final FXQuoteProvider quoteProvider;
 	
 	public static void main(String[] args)
 	{
-		new Main("EURUSD");
+		Main application = new Main();
+		application.start();
 	}
 	
-	public Main(String currencyPair)
+	public Main()
+	{
+		this.currencyPair = "EURUSD";
+		this.quoteProvider = new FXQuoteProvider();
+	}
+	
+	public void start()
 	{
 		quoteProvider.subscribe(currencyPair, this);
 	}
@@ -20,6 +28,7 @@ public class Main implements FXQuoteListener
 	@Override
 	public void onQuote(String currencyPair, double rate)
 	{
-		System.out.println("Received a quote for " + currencyPair + ": " + rate);
+		String logMessage = "Received a quote for " + currencyPair + ": " + rate;
+		// what am I going to do with this?
 	}
 }

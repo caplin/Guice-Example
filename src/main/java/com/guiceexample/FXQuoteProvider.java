@@ -10,11 +10,12 @@ import java.util.concurrent.TimeUnit;
 public class FXQuoteProvider
 {
 	private final QuoteService quoteService;
-	private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+	private final ScheduledExecutorService scheduledExecutor;
 	
 	public FXQuoteProvider()
 	{
 		this.quoteService = new YahooQuoteService();
+		this.scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 	}
 	
 	public void subscribe(final String currencyPair, final FXQuoteListener listener)
