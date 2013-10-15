@@ -3,18 +3,18 @@
  */
 package com.guiceexample;
 
-public class Main implements FXQuoteListener
+public class Application implements FXQuoteListener
 {
 	private final String currencyPair;
 	private final FXQuoteProvider quoteProvider;
 	
 	public static void main(String[] args)
 	{
-		Main application = new Main();
+		Application application = new Application();
 		application.start();
 	}
 	
-	public Main()
+	public Application()
 	{
 		this.currencyPair = "EURUSD";
 		this.quoteProvider = new FXQuoteProvider();
