@@ -8,6 +8,7 @@ import javax.inject.Singleton;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.name.Named;
 
 @Singleton
 public class Application implements FXQuoteListener
@@ -24,7 +25,7 @@ public class Application implements FXQuoteListener
 	}
 	
 	@Inject
-	public Application(String currencyPair, FXQuoteProvider quoteProvider, AuditLogger auditLogger)
+	public Application(@Named("CurrencyPair") String currencyPair, FXQuoteProvider quoteProvider, AuditLogger auditLogger)
 	{
 		this.currencyPair = currencyPair;
 		this.quoteProvider = quoteProvider;
