@@ -3,46 +3,58 @@
  */
 package com.guiceexample;
 
+import static org.mockito.Mockito.*;
+
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import static org.mockito.Mockito.*;
 import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class FXQuoteProviderTest
 {
+	private static final String CURRENCY_PAIR = "GBPUSD";
+
 	private FXQuoteProvider provider;
+	
 	private @Mock FXQuoteListener listener;
+	private @Mock QuoteService quoteService;
+	private @Mock ScheduledExecutorService scheduledExecutor;
 	
 	@Before
 	public void setUp()
 	{
-		provider = new FXQuoteProvider();
+		provider = new FXQuoteProvider(quoteService, scheduledExecutor);
 	}
 	
 	@Test
 	public void itSchedulesAnUpdateTaskWhenISubscribe()
 	{
 		// When
-		provider.subscribe("GBPUSD", listener);
+		provider.subscribe(CURRENCY_PAIR, listener);
 		
 		// Then
-		// I want a task to be scheduled on the executor service
+		verify(scheduledExecutor).scheduleAtFixedRate(any(Runnable.class), eq(0l), eq(1l), eq(TimeUnit.SECONDS));
 	}
 	
 	@Test
 	public void itCallsBackOnMyListenerWhenTheQuoteIsReceived()
 	{
 		// Given
-		// my mock quote service will return a rate of 1.5 for GBPUSD
-		provider.subscribe("GBPUSD", listener);
+		when(quoteService.getQuote(CURRENCY_PAIR)).thenReturn(1.5d);
+		ArgumentCaptor<Runnable> argument = ArgumentCaptor.forClass(Runnable.class);
+		provider.subscribe(CURRENCY_PAIR, listener);
 		
 		// When
-		// the scheduled task runs
+		verify(scheduledExecutor).scheduleAtFixedRate(argument.capture(), eq(0l), eq(1l), eq(TimeUnit.SECONDS));
+		argument.getValue().run();
 		
 		// Then
-		verify(listener).onQuote("GBPUSD", 1.5d);
+		verify(listener).onQuote(CURRENCY_PAIR, 1.5d);
 	}
 }

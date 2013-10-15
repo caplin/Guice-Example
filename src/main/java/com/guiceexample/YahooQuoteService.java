@@ -12,9 +12,11 @@ import org.apache.commons.io.IOUtils;
 
 public class YahooQuoteService implements QuoteService
 {
-	public YahooQuoteService()
+	private final AuditLogger auditLogger;
+
+	public YahooQuoteService(AuditLogger auditLogger)
 	{
-		
+		this.auditLogger = auditLogger;
 	}
 	
 	@Override
@@ -24,7 +26,7 @@ public class YahooQuoteService implements QuoteService
 		{
 			URL url = new URL("http://finance.yahoo.com/d/quotes.csv?s=" + currencyPair + "=X&f=sl1d1t1ba&e=.csv");
 			
-			// I want to log the URL I'm retrieving quotes from
+			auditLogger.log("Retrieving a quote from: " + url);
 			
 			InputStream stream = url.openStream();
 			List<String> lines = IOUtils.readLines(stream);
