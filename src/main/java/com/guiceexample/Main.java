@@ -3,21 +3,30 @@
  */
 package com.guiceexample;
 
+import java.util.concurrent.Executors;
+
 public class Main implements FXQuoteListener
 {
 	private final String currencyPair;
 	private final FXQuoteProvider quoteProvider;
+	private final AuditLogger auditLogger;
 	
 	public static void main(String[] args)
 	{
-		Main application = new Main();
+		AuditLogger auditLogger = new AuditLogger();
+		
+		FXQuoteProvider quoteProvider = new FXQuoteProvider(Executors.newSingleThreadScheduledExecutor(), auditLogger);
+		
+		Main application = new Main("EURUSD", quoteProvider, auditLogger);
+		
 		application.start();
 	}
 	
-	public Main()
+	public Main(String currencyPair, FXQuoteProvider quoteProvider, AuditLogger auditLogger)
 	{
-		this.currencyPair = "EURUSD";
-		this.quoteProvider = new FXQuoteProvider();
+		this.currencyPair = currencyPair;
+		this.quoteProvider = quoteProvider;
+		this.auditLogger = auditLogger;
 	}
 	
 	public void start()
@@ -29,8 +38,6 @@ public class Main implements FXQuoteListener
 	public void onQuote(String currencyPair, double rate)
 	{
 		String logMessage = "Received a quote for " + currencyPair + ": " + rate;
-		System.out.println(logMessage);
-		
-		// I want to log this
+		auditLogger.log(logMessage);
 	}
 }
