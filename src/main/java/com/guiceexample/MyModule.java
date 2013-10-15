@@ -3,7 +3,6 @@
  */
 package com.guiceexample;
 
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 import javax.inject.Inject;
@@ -17,7 +16,9 @@ public class MyModule extends AbstractModule
 	protected void configure()
 	{
 		bind(String.class).toInstance("EURUSD");
-		bind(ScheduledExecutorService.class).toInstance(Executors.newSingleThreadScheduledExecutor());
+		
+		//bind(ScheduledExecutorService.class).toInstance(Executors.newSingleThreadScheduledExecutor());
+		bind(ScheduledExecutorService.class).toProvider(new ExecutorProvider());
 	}
 	
 	@Provides
