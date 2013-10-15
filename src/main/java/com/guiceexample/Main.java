@@ -29,6 +29,8 @@ public class Main implements FXQuoteListener
 	public void onQuote(String currencyPair, double rate)
 	{
 		String logMessage = "Received a quote for " + currencyPair + ": " + rate;
-		// what am I going to do with this?
+		System.out.println(logMessage);
+		
+		// I want to log this
 	}
 }
