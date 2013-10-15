@@ -6,11 +6,16 @@ package com.guiceexample;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
 public class FXQuoteProvider
 {
 	private final QuoteService quoteService;
 	private final ScheduledExecutorService scheduledExecutor;
 	
+	@Inject
 	public FXQuoteProvider(QuoteService quoteService, ScheduledExecutorService scheduledExecutor)
 	{
 		this.quoteService = quoteService;

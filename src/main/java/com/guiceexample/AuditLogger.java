@@ -3,6 +3,9 @@
  */
 package com.guiceexample;
 
+import javax.inject.Singleton;
+
+@Singleton
 public class AuditLogger
 {
 	public void log(String message)

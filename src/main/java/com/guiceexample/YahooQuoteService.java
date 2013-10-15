@@ -8,12 +8,15 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.apache.commons.io.IOUtils;
 
 public class YahooQuoteService implements QuoteService
 {
 	private final AuditLogger auditLogger;
 
+	@Inject
 	public YahooQuoteService(AuditLogger auditLogger)
 	{
 		this.auditLogger = auditLogger;

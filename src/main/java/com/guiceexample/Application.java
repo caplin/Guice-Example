@@ -3,9 +3,13 @@
  */
 package com.guiceexample;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+
+@Singleton
 public class Application implements FXQuoteListener
 {
 	private final String currencyPair;
@@ -14,17 +18,12 @@ public class Application implements FXQuoteListener
 	
 	public static void main(String[] args)
 	{
-		String currencyPair = "EURUSD";
-		ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-		AuditLogger auditLogger = new AuditLogger();
-		
-		YahooQuoteService quoteService = new YahooQuoteService(auditLogger);
-		FXQuoteProvider quoteProvider = new FXQuoteProvider(quoteService, scheduledExecutor);
-		Application application = new Application(currencyPair, quoteProvider, auditLogger);
-		
+		Injector injector = Guice.createInjector(new MyModule());
+		Application application = injector.getInstance(Application.class);
 		application.start();
 	}
 	
+	@Inject
 	public Application(String currencyPair, FXQuoteProvider quoteProvider, AuditLogger auditLogger)
 	{
 		this.currencyPair = currencyPair;
