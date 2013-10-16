@@ -31,7 +31,7 @@ public class FXQuoteProvider
 			{
 				double midPrice = quoteService.getMidPrice(currencyPair);
 				
-				// I need the QuoteFactory to create me a Quote from the mid price
+				// I need the QuoteBuilder to create me a Quote from the mid price
 				Quote quote = null;
 				listener.onQuote(currencyPair, quote);
 			}
