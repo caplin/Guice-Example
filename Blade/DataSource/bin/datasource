@@ -1,0 +1,107 @@
+#!/bin/sh
+#
+# Script to allow a Java binary to be started from the standard datasource start script.
+# This script assumes it's operating in the Deployment Framework.
+#
+#
+
+#
+# Use the parameters passed from datasrc script to initialise the 
+#
+# - the root directory
+# - application name
+# - config file
+#
+while [ "$1" != "" ]
+do
+    case "$1" in
+    -n)
+        bladename=$2
+        shift
+        ;;
+    -f)
+        configfile=$2
+        shift
+        ;;
+    -r)
+        root=$2
+        shift
+        ;;
+    esac
+    shift
+done
+
+
+if [ "$bladename" = "" ]; then
+    echo 'Usage: ' $0 ' -n name -f configfile -r root'
+    exit   1
+fi
+
+if [ "$root" = "" ]; then
+    echo 'Usage: ' $0 ' -n name -f configfile -r root'
+    exit   1
+fi
+
+if [ "$configfile" = "" ]; then
+    echo 'Usage: ' $0 ' -n name -f configfile -r root'
+    exit   1
+fi
+
+iscygwin=0
+if [ `uname | grep -n CYGWIN` ]; then
+    iscygwin=1
+    #
+    # root is quoted by the calling script because it may have spaces but we need to remove 
+    # them or else cygpath won't work.
+    #
+    root="${root//\"/}"
+    root=`cygpath "$root"`
+fi
+
+#
+# Save the current directory
+#
+dir=`pwd`
+
+#
+# Go to the root since the Java DataSource needs to be started from there.
+#
+cd "$root"
+
+#
+# Attempt to start the DataSource jar.
+#
+pid=`./bin/start-jar.sh "$DSDK_JVM_BASE/bin/java" etc/datasource.xml etc/fields.xml "$DSDK_JAVA_DEFINITIONS"  | tail -1`
+
+#
+# Create the pid file if DataSource started.
+#
+if [ "$pid" = "" ]; then
+    echo "$bladename not started"
+else
+    if [ $iscygwin = 1 ]; then
+       #
+       # Allow time for the /proc/$pid dir to appear and get the 
+       # Windows pid for the pidfile.
+       #
+       sleep 1
+       if [ -d /proc/$pid -a -f /proc/$pid/winpid ]; then
+          winpid=`cat /proc/$pid/winpid`
+          pid=`echo $winpid | tr -d '\r'`
+       else
+          echo "No /proc/$pid/winpid file" >> $LOGDIR/java.log
+          pid=
+       fi
+    fi
+    if [ $iscygwin = 1 ]; then
+       echo $pid > `cygpath "$DSDK_PIDFILE"`
+       dos2unix "$DSDK_PIDFILE" 2> /dev/null
+    else
+       echo $pid > $DSDK_PIDFILE
+    fi
+fi
+
+#
+# Go back to to where we came from.
+#
+cd "${dir}"

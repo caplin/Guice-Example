@@ -1,0 +1,15 @@
+#!/bin/sh
+OLDDIR=`pwd`
+DIRNAME=`dirname "$0"`
+cd "$DIRNAME/.."
+PROGROOT=`pwd`
+cd "$OLDDIR"
+
+if [ `uname | grep -n CYGWIN` ]; then
+    jar=`cygpath -wm "$PROGROOT"/lib/datasource-java*.jar`
+else
+    jar="$PROGROOT"/lib/datasource-java*.jar
+fi
+
+
+java -cp "$jar" com.caplin.legacydatasrc.JLogCat $*

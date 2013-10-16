@@ -1,0 +1,559 @@
+#!/bin/sh
+
+
+######################################################################
+#
+# Caplin Liberator, Transformer and DataSources startup script
+#
+######################################################################
+
+if [ -z "$DSDK_ROOT" ]; then
+    DSDK_ROOT=`dirname $0`/..
+    sd=`pwd`
+    cd "$DSDK_ROOT"
+    DSDK_ROOT=`pwd`
+    cd "$sd"
+    export DSDK_ROOT
+fi
+
+if [ -z "$DSDK_START" ]; then
+    DSDK_START=start-noloop
+    #DSDK_START=start-loop
+fi
+
+# Set the OpenSSL config file if it's not previous set
+if [ -z "$OPENSSL_CONF" ]; then
+    OPENSSL_CONF="$DSDK_ROOT/openssl.cnf"
+    export OPENSSL_CONF
+fi
+
+
+# Location of JVM library directory. If not specified then java.conf
+# will be queried to determine its location.
+# The JVM requires LD_LIBRARY_PATH to be set on Linux for <JDK1.5
+if [ `uname` = "Linux" ]; then
+   JVM_LIB_DIR=
+else
+   MY_LD_PRELOAD_32=/usr/lib/libmtmalloc.so.1:$LD_PRELOAD_32
+   MY_LD_PRELOAD_64=/usr/lib/sparcv9/libmtmalloc.so.1:$LD_PRELOAD_64
+fi
+
+
+# Location and options for any preprocessor that you wish to run on
+# the configuration files
+#
+# m4 may be a suitable preprocessor
+if [ ! -z "$PREPROCESSOR" ]; then
+    PREPROCESSOR=
+fi
+
+#OPTIONS=
+
+
+######################################################################
+#
+# Do not change anything under this line
+#
+######################################################################
+iscygwin=0
+if [ `uname | grep -n CYGWIN` ]; then
+   iscygwin=1
+   MY_LD_PRELOAD=""
+fi
+
+
+# Deduce (simply) a good version of awk
+AWK=awk
+if [ `uname` = "SunOS" ]; then
+   AWK=nawk
+fi
+
+# Linux threading libraries, the version of NPTL supplied with Redhat
+# distributions based on Kernel 2.4 appears to have some issues, so
+# on those platforms fallback to using LinuxThreads, this is achieved
+# using LD_ASSUME_KERNEL (http://people.redhat.com/drepper/assumekernel.html)
+if [ `uname` = "Linux" ]; then
+    if [ "`uname -r| cut -c1-3`" =  "2.4" ]; then
+        LD_ASSUME_KERNEL=2.4.19
+        export LD_ASSUME_KERNEL
+    fi
+
+    PSCMD="ps auxm"
+else
+    PSCMD="ps -ef"
+fi
+
+
+# Check for system startup script style name
+BASE=`basename $0 | sed 's/[SK][0-9][0-9]//1'`
+
+APP=`echo $BASE | sed 's/-.*//1'`
+
+#
+# Various Windows stuff
+#  - Create the correct appname for windows
+#  - Get the correct options for ps
+#
+if [ $iscygwin = 1 ]; then
+   APPBASE=$APP; export APPBASE
+   if [ -f "$DSDK_ROOT/bin/$APP.exe" ]; then
+      APP=$APP.exe
+   fi
+   PSCMD="ps -eW"
+   PREPROCESSOR=
+else
+   APPBASE=$APP
+fi
+
+# Check if file exists and is runnable
+if [ ! -f "$DSDK_ROOT/bin/$APP" ]; then
+    echo $DSDK_ROOT/bin/$APP does not exist
+    exit 10
+else
+    if [ ! -x "$DSDK_ROOT/bin/$APP" ]; then
+        echo $DSDK_ROOT/bin/$APP is not executable
+        exit 11
+    fi
+fi
+
+#
+# Find out if we're running as a blade inside a Deployment Framework.
+# If we are set up some useful macros.
+#
+if [ "`echo $DSDK_ROOT | grep -n active_blades`" != "" ]; then
+   deployment_framework=1
+   #
+   # Export the locations used in the DataSource configuraton for blades.
+   #
+   cd "$DSDK_ROOT"
+   if [ -d "../../../../active_blades" ]; then
+      CONFIG_BASE=../../../../global_config/
+   else
+      CONFIG_BASE=../../../global_config/
+   fi
+   export CONFIG_BASE
+   FIELDS_DIR=../../blade_config/; export FIELDS_DIR
+
+   #
+   # Work out blade name.
+   #
+   cd ..
+   BLADEDIR=`pwd`
+   BLADENAME=`basename "$BLADEDIR"`
+
+   #
+   # Get location of configuration translation tool.
+   #
+   CONF2XML="$DSDK_ROOT/bin/conf2xml"
+
+   cd "$sd"
+
+   #
+   # If we're a Java DS, use conf2xml to read config macros, otherwise use the application binary.
+   #
+   if [ -f "$DSDK_ROOT/bin/start-jar.sh" ]; then
+      CONFREADER="$CONF2XML"
+   else
+      CONFREADER="$DSDK_ROOT/bin/$APP"
+   fi
+else
+   CONFREADER="$DSDK_ROOT/bin/$APP"
+   deployment_framework=0
+fi
+
+CONFIG_FILE="$DSDK_ROOT/etc/$BASE.conf"
+CONFIG_FILE_BASENAME=`basename "$CONFIG_FILE"`
+
+BASE2=$BASE
+
+if [ $iscygwin = 0 ]; then
+   BINARY_ROOT="$DSDK_ROOT"
+   CONFREADER_OPTIONS="-f $CONFIG_FILE_BASENAME"
+else
+   BINARY_ROOT=`cygpath -wm "$DSDK_ROOT"`
+   CONFREADER_OPTIONS="-f $CONFIG_FILE_BASENAME"
+fi
+export BINARY_ROOT
+
+# Check the config file for any application-name settings
+APPCONF=`"$CONFREADER" $CONFREADER_OPTIONS -r "\"$BINARY_ROOT\"" --get-config-value application-name 2> /dev/null | tr -d '\r'`
+if [ "$APPCONF"x != x ]; then
+   BASE2=$APPCONF
+fi
+export APPBASE
+
+# Now deduce where the pid file will go
+#
+# Use the binary to read the config because it may be a macro. Since this takes a bit of time, don't do it more than once.
+# Don't need to do this for Java blades.
+#
+if [ "$PIDFILE" = "" -o "$LOGDIR" = "" ]; then
+    LOGDIR_CONFIG=`"$CONFREADER"  -r "\"$BINARY_ROOT\"" $CONFREADER_OPTIONS --get-config-value log-dir      2> /dev/null | tr -d '\r'`
+    PIDFILE_CONFIG=`"$CONFREADER" -r "\"$BINARY_ROOT\"" $CONFREADER_OPTIONS --get-config-value pid-filename 2> /dev/null | tr -d '\r'`
+    LOGDIR=`echo "$LOGDIR_CONFIG" | $AWK '{gsub( "%u", ENVIRON["USER"]); gsub( "%r", ENVIRON["BINARY_ROOT"]); gsub( "%[a|n]", ENVIRON["APPBASE"]); print }' `
+    export LOGDIR
+    PIDFILE=`echo $PIDFILE_CONFIG | $AWK '{gsub( "%u", ENVIRON["USER"]); gsub( "%d", ENVIRON["LOGDIR"]); gsub( "%r", ENVIRON["BINARY_ROOT"]); gsub( "%[a|n]", ENVIRON["APPBASE"]); print }' `
+fi
+
+if [ $iscygwin = 1 ]; then
+   if [ "$PIDFILE" != "" ]; then
+      PIDFILE=`cygpath "$PIDFILE"`
+   fi
+   if [ "$LOGDIR" != "" ]; then
+      LOGDIR=`cygpath "$LOGDIR"`
+   fi
+fi
+
+export LOGDIR
+export PIDFILE
+
+# Try to find jvm-location for LD_LIBRARY_PATH
+if [ `uname` = "Linux" ]; then
+    if [ "$JVM_LIB_DIR"x = x ]; then
+       JVM_LIB_DIR=`"$CONFREADER" -r "\"$BINARY_ROOT\"" $CONFREADER_OPTIONS --get-config-value jvm-location 2> /dev/null | sed 's,/libjvm.so,,1' | sed 's,/libjava.so,,1' | tr -d '\r'`
+       LD_LIBRARY_PATH=$JVM_LIB_DIR:$JVM_LIB_DIR/server:$LD_LIBRARY_PATH
+       export LD_LIBRARY_PATH
+       export JVM_LIB_DIR
+    fi
+fi
+
+
+LD_LIBRARY_PATH=$DSDK_ROOT/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH
+
+# Load up any additional startup that is required for this datasource
+if [ -f "$DSDK_ROOT/etc/${BASE}_extra.sh" ]; then
+  . "$DSDK_ROOT/etc/${BASE}_extra.sh"
+fi
+
+if [ "$PREPROCESSOR" != "" ]; then
+    OPTIONS="$OPTIONS --preprocessor-binary=$PREPROCESSOR"
+fi
+
+# Initialise exit code. It is used to store $? from script and app calls.
+EXITCODE=0
+
+case "$1" in
+  start)
+	$0 stop
+	$0 $DSDK_START
+        # Save $0 exit code
+        EXITCODE=$?
+	;;
+  restart)
+	$0 start
+        # Save $0 exit code
+        EXITCODE=$?
+	;;
+  start-noloop)
+        # If there is a core file then rename it to include the timestamp
+        if [ -f "$DSDK_ROOT/core" ]; then
+
+            TIMESTAMP=`ls -l "$DSDK_ROOT/core" | $AWK '{print $6 "-" $7 "-" $8}'`
+
+            echo
+            echo "Renaming "$DSDK_ROOT/core" file to core-$TIMESTAMP"
+            echo
+            
+            /bin/mv -f "$DSDK_ROOT/core" "$DSDK_ROOT/core-$TIMESTAMP"
+
+        fi
+
+        #
+        # If we're running inside a Deployment Framework use the hosts file to decide on whether we start.
+        #
+        if [ $deployment_framework = 1 ]; then
+
+           # Work out blade hostname.
+           #
+           LEG=`"$CONFREADER"  -r "\"$BINARY_ROOT\"" $CONFREADER_OPTIONS --get-config-macro THIS_LEG 2> /dev/null`
+           LEG=`echo $LEG | tr -d '\r'`
+           BLADE_HOSTNAME_MACRO="$BLADENAME$LEG"_HOST
+           BLADE_HOSTNAME=`"$CONFREADER" -r "\"$BINARY_ROOT\"" $CONFREADER_OPTIONS --get-config-macro $BLADE_HOSTNAME_MACRO 2> /dev/null`
+           BLADE_HOSTNAME=`echo $BLADE_HOSTNAME | tr -d '\r'`
+
+           #
+           # Check if this blade's DataSource should be running on this host.
+           #
+           hostname=`hostname`
+           if [ "$BLADE_HOSTNAME" = "" ]; then
+               echo "Warning: Hostname for $BLADENAME not defined in hosts.conf, not starting $BLADENAME DataSource" > "$LOGDIR/framework.log"
+               exit 0
+           elif [ "$BLADE_HOSTNAME" != "localhost" -a "$BLADE_HOSTNAME" != "$hostname" ]; then
+               echo "$BLADENAME DataSource runs on $BLADE_HOSTNAME, not starting on $hostname" > "$LOGDIR/framework.log"
+               exit 0
+           fi
+
+           #
+           # If this is a Java DS set up Java options
+           #
+           if [ -f "$DSDK_ROOT/bin/start-jar.sh" ]; then
+              #
+              # Get the location of the JVM BASE directory.
+              #
+
+              DSDK_JVM_BASE=`"$CONFREADER" -r "\"$BINARY_ROOT\"" $CONFREADER_OPTIONS --get-config-macro JVM_BASE 2> /dev/null`
+              DSDK_JVM_BASE=`echo $DSDK_JVM_BASE | tr -d '\r'`
+              export DSDK_JVM_BASE
+              
+              if [ "$DSDK_JVM_BASE" = "" ]; then
+                  echo Error: "JVM_BASE not defined" >> "$LOGDIR/framework.log"; cat "$LOGDIR/framework.log"
+                  exit 201
+              fi
+
+              #
+              # Get the RMI server hostname.
+              #
+              RMI_SERVER_HOSTNAME=`"$CONFREADER" -r "\"$BINARY_ROOT\"" $CONFREADER_OPTIONS --get-config-value rmi-server-hostname 2> /dev/null`
+              RMI_SERVER_HOSTNAME=`echo $RMI_SERVER_HOSTNAME | tr -d '\r'`
+              DSDK_JAVA_DEFINITIONS=
+              if [ "$RMI_SERVER_HOSTNAME" != "" ]; then
+                 DSDK_JAVA_DEFINITIONS="-Djava.rmi.server.hostname=$RMI_SERVER_HOSTNAME"
+                 export DSDK_JAVA_DEFINITIONS
+              fi
+
+              #
+              # Generate the xml config from the conf file.
+              #
+              rm -f "$DSDK_ROOT/etc/datasource.xml" "$DSDK_ROOT/etc/fields.xml"
+              "$CONF2XML" $CONFREADER_OPTIONS -n $BLADENAME -r "\"$BINARY_ROOT\"" --xml-config-file etc/datasource.xml  --xml-fields-file etc/fields.xml
+              ret=$?
+              if [ $ret != 0 ]; then
+                 echo "Error: Problem translating $bladename configuration files" >> "$LOGDIR/framework.log"; cat "$LOGDIR/framework.log"
+                 exit $ret
+              fi
+           fi
+           #
+           # If we get this far then any previous Framework issues have been fixed.
+           #
+           rm -f "$LOGDIR/framework.log"
+
+           #
+           # The Java script needs to know the pid file name. It could have been set in config.
+           #
+           DSDK_PIDFILE="$PIDFILE"; export DSDK_PIDFILE
+        fi
+
+        OPTIONS="$OPTIONS -f $CONFIG_FILE_BASENAME -n $BASE2"
+
+        echo "Starting $BASE: "
+
+        ulimit -c unlimited 2> /dev/null
+
+        # coreadm is a Solaris feature, unfortunately there is no way to modify
+        # the core file format on a per process basis on Linux
+        coreadm -e proc-setid 2> /dev/null
+        coreadm -p $LOGDIR/core.%f.%p.%t $$ 2> /dev/null
+
+        # Set up preload
+        if [ ! -z "$MY_LD_PRELOAD_32" ]; then
+           LD_PRELOAD_32=$MY_LD_PRELOAD_32; export LD_PRELOAD_32
+        fi
+        if [ ! -z "$MY_LD_PRELOAD_64" ]; then
+           LD_PRELOAD_64=$MY_LD_PRELOAD_64; export LD_PRELOAD_64
+        fi
+        if [ ! -z "$MY_LD_PRELOAD" ]; then
+           LD_PRELOAD=$MY_LD_PRELOAD; export LD_PRELOAD
+        fi
+
+        if [ $iscygwin = 0 ]; then
+            "$DSDK_ROOT/bin/$APP" -r "$DSDK_ROOT" $OPTIONS -d
+            EXITCODE=$?
+        else
+            #
+            # Have to redirect the nohup output to allow this command to be run via ssh.
+            #
+            nohup "$DSDK_ROOT/bin/$APP" -r "\"$BINARY_ROOT\"" $OPTIONS -d 2> "$LOGDIR/nohup.out"  > /dev/null &
+            EXITCODE=$?
+        fi
+
+        if [ $EXITCODE != 0 ]; then
+            errmsg="$DSDK_ROOT/bin/$APP exited with code ($EXITCODE)"
+         else
+            # Wait up to 5 seconds and check if pid file exists to catch
+            # post fork exits. 
+            # Also ensure that the pid in the pid file is running in
+            # case an old pid file is lurking around
+
+            num=0
+
+            while [ ! -f "$PIDFILE" ]; do
+                sleep 1
+                num=`expr $num + 1`
+
+                if [ $num -eq 5 ]; then
+                    break
+                fi
+            done
+
+            if [ -f "$PIDFILE" ]; then
+                pid=`cat "$PIDFILE"`
+
+                if [ "$pid" = "" ]; then
+                   errmsg="$DSDK_ROOT/bin/$APP may be running but an empty pid file has been created" 1>&2
+                   EXITCODE=12
+                else
+                   if [ $iscygwin = 0 ]; then
+                      binrunning=`ps -p $pid | grep $pid`
+                   else
+                      binrunning=`$PSCMD | grep -v grep | awk '{print $4}' | grep $pid`
+                   fi
+                   if [ "$binrunning" = "" ]; then
+                       errmsg="$DSDK_ROOT/bin/$APP exited after startup (no process)"
+                       EXITCODE=12
+                   fi
+               fi
+            else
+                errmsg="$DSDK_ROOT/bin/$APP exited after startup (no pid file)"
+                EXITCODE=12
+            fi
+        fi
+
+        #
+        # Output the messages redirected by nohup
+        #
+        if [ -f "$LOGDIR/nohup.out" ]; then
+           sleep 1
+           cat "$LOGDIR/nohup.out"
+           echo
+        fi
+
+        #
+        # Have to defer printing the error message so it appears after nohup.out if there is one.
+        #
+        if [ "$errmsg" != "" ]; then
+           echo $errmsg
+        fi
+
+        echo
+	;;
+  stop)
+
+        if [ -f "$LOGDIR/loop.log" ]; then
+	    echo "Shutting down loop for $BASE: "
+
+            looppid=`grep loop-pid "$LOGDIR/loop.log" | tail -1 | $AWK '{ print $2 }'`
+
+            if [ "$looppid" != "" ]; then
+
+                kill $looppid > /dev/null 2>&1
+
+            fi
+
+        fi
+        
+        if [ -f "$PIDFILE" ]; then
+	    echo "Shutting down $BASE: "
+
+            pid=`cat "$PIDFILE"`
+            if [ "$pid" = "" ]; then
+               echo "Can't stop $APP, pidfile is empty. Removing empty pidfile <$PIDFILE>"
+               rm -f "$PIDFILE"
+               EXITCODE=12
+            else
+
+               num=0
+
+               if [ $iscygwin = 0 ]; then
+                   kill -TERM $pid > /dev/null 2>&1
+               else
+                   taskkill /F /PID $pid
+               fi
+               rm -f "$PIDFILE"
+
+               if [ "$pid" != "" -a $iscygwin = 0 ]; then
+                  sleep 1
+                  while [ -d "/proc/$pid" ]; do
+                      echo "Waiting for $APP <$pid> to stop"
+                      sleep 1
+                      num=`expr $num + 1`
+   
+                      if [ $num -eq 10 ]; then
+                          echo "Killing $APP <$pid> again"
+                          kill -KILL $pid > /dev/null 2>&1
+                          break
+                      fi
+                  done
+               fi
+           fi
+        fi
+
+        echo
+	;;
+  check)
+        if [ ! -f "$PIDFILE" ]; then
+
+            date
+            echo "============================"
+            $0 start-noloop
+            # Save $0 exit code
+            EXITCODE=$?
+
+        else
+        
+            PID=`cat "$PIDFILE"`
+
+            ps -ae | grep -v grep | grep "$PID " > /dev/null 2>&1
+
+            if [ $? != 0 ]; then
+
+                date
+                echo "============================"
+                $0 start-noloop
+                # Save $0 exit code
+                EXITCODE=$?
+            else
+                echo "$BASE is running"
+            fi
+            
+        fi
+        ;;
+  start-loop)
+        if [ -f "$LOGDIR/loop.log" ]; then
+
+            looppid=`grep loop-pid "$LOGDIR/loop.log" | tail -1 | $AWK '{ print $2 }'`
+
+            if [ "$looppid" != "" ]; then
+
+                kill $looppid > /dev/null 2>&1
+
+            fi
+
+        fi
+        
+        (date; echo "============================") > "$LOGDIR/loop.log"
+
+        $0 start-noloop 2>&1 | tee "$LOGDIR/loop.log"
+
+        # If $0 exited, exit here because we're about to call it again
+        EXITCODE=$?
+        if [ $EXITCODE != 0 ]; then
+            exit $EXITCODE
+        fi
+
+        nohup $0 loop >> "$LOGDIR/loop.log" 2>&1 &
+        # Save $0 exit code
+        EXITCODE=$?
+        ;;
+  loop)
+        echo "loop-pid $$"
+        while true; do
+
+            sleep 5
+
+            $0 check
+            # Save $0 exit code
+            EXITCODE=$?
+
+        done
+        ;;
+  *)
+	echo "Usage: $0 {start|stop|restart|check}"
+	exit 1
+esac
+
+if [ $EXITCODE != 0 ]; then
+    exit $EXITCODE
+fi
+
+exit 0
