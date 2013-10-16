@@ -29,7 +29,10 @@ public class FXQuoteProvider
 			@Override
 			public void run()
 			{
-				double quote = quoteService.getQuote(currencyPair);
+				double midPrice = quoteService.getMidPrice(currencyPair);
+				
+				// I need the QuoteFactory to create me a Quote from the mid price
+				Quote quote = null;
 				listener.onQuote(currencyPair, quote);
 			}
 		};

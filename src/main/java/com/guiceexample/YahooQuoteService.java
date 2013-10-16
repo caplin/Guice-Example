@@ -23,7 +23,7 @@ public class YahooQuoteService implements QuoteService
 	}
 	
 	@Override
-	public double getQuote(String currencyPair)
+	public double getMidPrice(String currencyPair)
 	{
 		try
 		{

@@ -5,5 +5,5 @@ package com.guiceexample;
 
 public interface QuoteService
 {
-	double getQuote(String currencyPair);
+	double getMidPrice(String currencyPair);
 }

@@ -14,7 +14,7 @@ public class OfflineQuoteService implements QuoteService
 	}
 	
 	@Override
-	public double getQuote(String currencyPair)
+	public double getMidPrice(String currencyPair)
 	{
 		return /* quote from the map */ 0;
 	}

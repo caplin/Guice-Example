@@ -46,7 +46,7 @@ public class FXQuoteProviderTest
 	public void itCallsBackOnMyListenerWhenTheQuoteIsReceived()
 	{
 		// Given
-		when(quoteService.getQuote(CURRENCY_PAIR)).thenReturn(1.5d);
+		when(quoteService.getMidPrice(CURRENCY_PAIR)).thenReturn(1.5d);
 		ArgumentCaptor<Runnable> argument = ArgumentCaptor.forClass(Runnable.class);
 		provider.subscribe(CURRENCY_PAIR, listener);
 		
@@ -55,6 +55,6 @@ public class FXQuoteProviderTest
 		argument.getValue().run();
 		
 		// Then
-		verify(listener).onQuote(CURRENCY_PAIR, 1.5d);
+		verify(listener).onQuote(eq(CURRENCY_PAIR), any(Quote.class));
 	}
 }

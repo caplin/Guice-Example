@@ -37,9 +37,9 @@ public class Application implements FXQuoteListener
 	}
 
 	@Override
-	public void onQuote(String currencyPair, double rate)
+	public void onQuote(String currencyPair, Quote quote)
 	{
-		String logMessage = "Received a quote for " + currencyPair + ": " + rate;
+		String logMessage = "Received a quote for " + currencyPair + ": " + quote.getBid() + "/" + quote.getAsk();
 		auditLogger.log(logMessage);
 	}
 }

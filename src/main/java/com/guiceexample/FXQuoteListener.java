@@ -5,5 +5,5 @@ package com.guiceexample;
 
 public interface FXQuoteListener
 {
-	void onQuote(String currencyPair, double rate);
+	void onQuote(String currencyPair, Quote quote);
 }
