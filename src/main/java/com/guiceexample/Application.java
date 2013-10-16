@@ -6,6 +6,8 @@ package com.guiceexample;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import com.caplin.datasource.ConnectionListener;
+import com.caplin.datasource.DataSource;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.guiceexample.injection.MyModule;
@@ -14,28 +16,30 @@ import com.guiceexample.util.AuditLogger;
 @Singleton
 public class Application implements FXQuoteListener
 {
-	private final String currencyPair;
 	private final FXQuoteProvider quoteProvider;
 	private final AuditLogger auditLogger;
+	private final DataSource dataSource;
 	
 	public static void main(String[] args)
 	{
-		Injector injector = Guice.createInjector(new MyModule());
+		Injector injector = Guice.createInjector(new MyModule(args));
 		Application application = injector.getInstance(Application.class);
 		application.start();
 	}
 	
 	@Inject
-	public Application(String currencyPair, FXQuoteProvider quoteProvider, AuditLogger auditLogger)
+	public Application(DataSource dataSource, FXQuoteProvider quoteProvider, ConnectionListener connectionListener, AuditLogger auditLogger)
 	{
-		this.currencyPair = currencyPair;
+		this.dataSource = dataSource;
 		this.quoteProvider = quoteProvider;
 		this.auditLogger = auditLogger;
+		
+		dataSource.addConnectionListener(connectionListener);
 	}
 	
 	public void start()
 	{
-		quoteProvider.subscribe(currencyPair, this);
+		dataSource.start();
 	}
 
 	@Override
