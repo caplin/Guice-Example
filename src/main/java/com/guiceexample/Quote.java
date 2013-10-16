@@ -5,6 +5,8 @@ package com.guiceexample;
 
 import java.util.Map;
 
+import com.guiceexample.util.AuditLogger;
+
 public class Quote
 {
 	private final Map<String, String> fields;

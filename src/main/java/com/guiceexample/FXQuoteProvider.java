@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import com.guiceexample.service.QuoteService;
+
 @Singleton
 public class FXQuoteProvider
 {

@@ -8,6 +8,8 @@ import javax.inject.Singleton;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.guiceexample.injection.MyModule;
+import com.guiceexample.util.AuditLogger;
 
 @Singleton
 public class Application implements FXQuoteListener

@@ -8,6 +8,8 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import com.guiceexample.util.AuditLogger;
+
 @Singleton
 public class QuoteFactory
 {

@@ -1,7 +1,7 @@
 /*
  * Copyright 1995-2013 Caplin Systems Ltd
  */
-package com.guiceexample;
+package com.guiceexample.service;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +11,8 @@ import java.util.List;
 import javax.inject.Inject;
 
 import org.apache.commons.io.IOUtils;
+
+import com.guiceexample.util.AuditLogger;
 
 public class YahooQuoteService implements QuoteService
 {

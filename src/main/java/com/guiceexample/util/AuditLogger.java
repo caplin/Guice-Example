@@ -1,7 +1,7 @@
 /*
  * Copyright 1995-2013 Caplin Systems Ltd
  */
-package com.guiceexample;
+package com.guiceexample.util;
 
 import javax.inject.Singleton;
 
