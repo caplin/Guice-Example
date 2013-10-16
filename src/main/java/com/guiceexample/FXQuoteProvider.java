@@ -14,12 +14,14 @@ public class FXQuoteProvider
 {
 	private final QuoteService quoteService;
 	private final ScheduledExecutorService scheduledExecutor;
+	private final QuoteBuilder quoteBuilder;
 	
 	@Inject
-	public FXQuoteProvider(QuoteService quoteService, ScheduledExecutorService scheduledExecutor)
+	public FXQuoteProvider(QuoteService quoteService, ScheduledExecutorService scheduledExecutor, QuoteBuilder quoteBuilder)
 	{
 		this.quoteService = quoteService;
 		this.scheduledExecutor = scheduledExecutor;
+		this.quoteBuilder = quoteBuilder;
 	}
 	
 	public void subscribe(final String currencyPair, final FXQuoteListener listener)
@@ -31,8 +33,7 @@ public class FXQuoteProvider
 			{
 				double midPrice = quoteService.getMidPrice(currencyPair);
 				
-				// I need the QuoteBuilder to create me a Quote from the mid price
-				Quote quote = null;
+				Quote quote = quoteBuilder.createQuote(currencyPair, midPrice);
 				listener.onQuote(currencyPair, quote);
 			}
 		};

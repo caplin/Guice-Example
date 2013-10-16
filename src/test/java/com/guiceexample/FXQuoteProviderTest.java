@@ -25,11 +25,12 @@ public class FXQuoteProviderTest
 	private @Mock FXQuoteListener listener;
 	private @Mock QuoteService quoteService;
 	private @Mock ScheduledExecutorService scheduledExecutor;
+	private @Mock QuoteBuilder quoteBuilder;
 	
 	@Before
 	public void setUp()
 	{
-		provider = new FXQuoteProvider(quoteService, scheduledExecutor);
+		provider = new FXQuoteProvider(quoteService, scheduledExecutor, quoteBuilder);
 	}
 	
 	@Test

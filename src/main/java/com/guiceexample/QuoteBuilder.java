@@ -7,14 +7,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
 public class QuoteBuilder
 {
 	private final long baseQuoteID = System.currentTimeMillis();
 	private final AtomicInteger quoteID = new AtomicInteger(1);
+	private final QuoteFactory quoteFactory;
 	
-	public QuoteBuilder()
+	@Inject
+	public QuoteBuilder(QuoteFactory quoteFactory)
 	{
-		
+		this.quoteFactory = quoteFactory;
 	}
 	
 	public synchronized Quote createQuote(String currencyPair, double midPrice)
@@ -49,7 +55,6 @@ public class QuoteBuilder
 		fields.put("NumberOfPips", "2");
 		fields.put("TimePriceReceived", String.valueOf(System.currentTimeMillis()));
 		
-		// How do I create a Quote object?
-		return null;
+		return quoteFactory.create(fields);
 	}
 }
