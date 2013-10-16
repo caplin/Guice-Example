@@ -52,4 +52,9 @@ public class Subscription implements FXQuoteListener
 			publisher.publishToSubscribedPeers(message);
 		}
 	}
+	
+	public String getCurrencyPair()
+	{
+		return subject.split("/")[2];
+	}
 }

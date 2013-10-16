@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -18,7 +19,8 @@ import com.guiceexample.service.QuoteService;
 @Singleton
 public class FXQuoteProvider
 {
-	private final Map<String, Set<FXQuoteListener>> currencyPairToListenersMap = new ConcurrentHashMap<>();
+	private final Map<String, Set<FXQuoteListener>> currencyPairToFXQuoteListenersMap = new ConcurrentHashMap<>();
+	private final Map<String, ScheduledFuture<?>> currencyPairToTaskHandleMap = new ConcurrentHashMap<>();
 	
 	private final QuoteService quoteService;
 	private final ScheduledExecutorService scheduledExecutor;
@@ -32,15 +34,15 @@ public class FXQuoteProvider
 		this.quoteBuilder = quoteBuilder;
 	}
 	
-	public void subscribe(final String currencyPair, FXQuoteListener listener)
+	public void subscribe(final String currencyPair, FXQuoteListener subscription)
 	{
-		Set<FXQuoteListener> listeners = currencyPairToListenersMap.get(currencyPair);
+		Set<FXQuoteListener> listeners = currencyPairToFXQuoteListenersMap.get(currencyPair);
 		
 		if(listeners == null)
 		{
 			listeners = new HashSet<FXQuoteListener>();
-			listeners.add(listener);
-			currencyPairToListenersMap.put(currencyPair, listeners);
+			currencyPairToFXQuoteListenersMap.put(currencyPair, listeners);
+			listeners.add(subscription);
 		
     		Runnable updateTask = new Runnable()
     		{
@@ -51,18 +53,34 @@ public class FXQuoteProvider
     				
     				Quote quote = quoteBuilder.createQuote(currencyPair, midPrice);
     				
-    				for(FXQuoteListener listener : currencyPairToListenersMap.get(currencyPair))
+    				for(FXQuoteListener subscription : currencyPairToFXQuoteListenersMap.get(currencyPair))
     				{
-    					listener.onQuote(currencyPair, quote);
+    					subscription.onQuote(currencyPair, quote);
     				}
     			}
     		};
     		
-    		scheduledExecutor.scheduleAtFixedRate(updateTask, 0, 2, TimeUnit.SECONDS);
+    		ScheduledFuture<?> taskHandle = scheduledExecutor.scheduleAtFixedRate(updateTask, 0, 2, TimeUnit.SECONDS);
+    		currencyPairToTaskHandleMap.put(currencyPair, taskHandle);
 		}
 		else
 		{
-			listeners.add(listener);
+			listeners.add(subscription);
+		}
+	}
+
+	public void unsubscribe(String currencyPair, FXQuoteListener listener)
+	{
+		Set<FXQuoteListener> subscriptions = currencyPairToFXQuoteListenersMap.get(currencyPair);
+		if(subscriptions != null)
+		{
+			subscriptions.remove(listener);
+			if(subscriptions.isEmpty())
+			{
+				currencyPairToFXQuoteListenersMap.remove(currencyPair);
+				ScheduledFuture<?> taskHandle = currencyPairToTaskHandleMap.get(currencyPair);
+				taskHandle.cancel(false);
+			}
 		}
 	}
 }
