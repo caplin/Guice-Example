@@ -1,1 +1,5 @@
 /bin
+Blade/DataSource/etc/datasource.xml
+Blade/DataSource/etc/fields.xml
+Blade/DataSource/var/*.log
+Blade/DataSource/var/*.lck
