@@ -3,6 +3,9 @@
  */
 package com.guiceexample.datasource;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -20,6 +23,8 @@ import com.guiceexample.util.AuditLogger;
 @Singleton
 public class RateProvider implements DataProvider
 {
+	private final Map<String, Subscription> subjectToSubscriptionMap = new ConcurrentHashMap<>();
+	
 	private final ActivePublisher publisher;
 	private final FXQuoteProvider fxQuoteProvider;
 	private final SubscriptionFactory subscriptionFactory;
@@ -40,12 +45,6 @@ public class RateProvider implements DataProvider
 	}
 	
 	@Override
-	public void onDiscard(DiscardEvent discardEvent)
-	{
-		auditLogger.log("Received a request for: " + discardEvent.getSubject());
-	}
-
-	@Override
 	public void onRequest(RequestEvent requestEvent)
 	{
 		String subject = requestEvent.getSubject();
@@ -53,7 +52,18 @@ public class RateProvider implements DataProvider
 		
 		String currencyPair = subject.split("/")[2];
 		Subscription subscription = subscriptionFactory.create(subject, publisher);
+		subjectToSubscriptionMap.put(subject, subscription);
 		
 		fxQuoteProvider.subscribe(currencyPair, subscription);
+	}
+	
+	@Override
+	public void onDiscard(DiscardEvent discardEvent)
+	{
+		String subject = discardEvent.getSubject();
+		auditLogger.log("Received a discard for: " + subject);
+		
+		Subscription subscription = subjectToSubscriptionMap.get(subject);
+		fxQuoteProvider.unsubscribe(subscription.getCurrencyPair(), subscription);
 	}
 }
