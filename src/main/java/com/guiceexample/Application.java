@@ -8,6 +8,9 @@ import javax.inject.Singleton;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.guiceexample.modules.MyModule;
+import com.guiceexample.modules.OfflineModule;
+import com.guiceexample.modules.OnlineModule;
 
 @Singleton
 public class Application implements FXQuoteListener
@@ -18,7 +21,17 @@ public class Application implements FXQuoteListener
 	
 	public static void main(String[] args)
 	{
-		Injector injector = Guice.createInjector(new MyModule());
+		Injector injector;
+		
+		if(args.length > 0 && args[0].equals("--offline"))
+		{
+			injector = Guice.createInjector(new MyModule(), new OfflineModule());
+		}
+		else
+		{
+			injector = Guice.createInjector(new MyModule(), new OnlineModule());
+		}
+		
 		Application application = injector.getInstance(Application.class);
 		application.start();
 	}
