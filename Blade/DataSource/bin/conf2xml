@@ -1,0 +1,26 @@
+#!/bin/sh
+DIR=`dirname "$0"`
+
+OS=`uname`
+
+if [ "$OS" = "Linux" ]; then
+   CONF_CPU=`uname -m`
+   if [ "$CONF_CPU" = "x86_64" ]; then
+      conf2xml_bin="$DIR/x86_64-pc-linux-EL5-gnu/conf2xml"
+   else
+      conf2xml_bin="$DIR/i686-pc-linux-EL4-gnu/conf2xml"
+   fi
+elif [ "$OS" = "Darwin" ]; then
+   conf2xml_bin="$DIR/x86_64-apple-darwin/conf2xml"
+elif [ `uname | grep -n CYGWIN` ]; then
+   conf2xml_bin="$DIR/i686-pc-win32/conf2xml.exe"
+else
+   echo "OS is $OS, no conf2xml tool for this platform."
+   exit 1
+fi
+
+if [ "$BINARY_ROOT" != "" ]; then
+   "$conf2xml_bin" $* -r "$BINARY_ROOT"
+else
+   "$conf2xml_bin" $*
+fi
