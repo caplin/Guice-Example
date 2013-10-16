@@ -5,13 +5,17 @@ package com.guiceexample;
 
 import java.util.Map;
 
+import javax.inject.Inject;
+
+import com.google.inject.assistedinject.Assisted;
 import com.guiceexample.util.AuditLogger;
 
 public class Quote
 {
 	private final Map<String, String> fields;
 
-	public Quote(Map<String, String> fields, AuditLogger auditLogger)
+	@Inject
+	public Quote(@Assisted Map<String, String> fields, AuditLogger auditLogger)
 	{
 		this.fields = fields;
 		
