@@ -8,6 +8,7 @@ import javax.inject.Singleton;
 
 import com.caplin.datasource.ConnectionListener;
 import com.caplin.datasource.DataSource;
+import com.caplin.datasource.publisher.DataProvider;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.guiceexample.injection.MyModule;

@@ -18,8 +18,6 @@ public class Quote
 	public Quote(@Assisted Map<String, String> fields, AuditLogger auditLogger)
 	{
 		this.fields = fields;
-		
-		auditLogger.log("New Quote created for: " + getCurrencyPair());
 	}
 
 	public String getCurrencyPair()
@@ -35,5 +33,10 @@ public class Quote
 	public String getAsk()
 	{
 		return fields.get("L1_AllInAskRate");
+	}
+
+	public Map<String, String> getFields()
+	{
+		return fields;
 	}
 }
