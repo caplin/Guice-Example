@@ -10,6 +10,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import com.guiceexample.injection.QuoteFactory;
+
 @Singleton
 public class QuoteBuilder
 {

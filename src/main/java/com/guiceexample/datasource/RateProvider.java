@@ -13,27 +13,47 @@ import com.caplin.datasource.publisher.DataProvider;
 import com.caplin.datasource.publisher.DiscardEvent;
 import com.caplin.datasource.publisher.RequestEvent;
 import com.google.inject.name.Named;
+import com.guiceexample.FXQuoteProvider;
+import com.guiceexample.injection.SubscriptionFactory;
+import com.guiceexample.util.AuditLogger;
 
 @Singleton
 public class RateProvider implements DataProvider
 {
 	private final ActivePublisher publisher;
+	private final FXQuoteProvider fxQuoteProvider;
+	private final SubscriptionFactory subscriptionFactory;
+	private final AuditLogger auditLogger;
 
 	@Inject
-	public RateProvider(DataSource dataSource, @Named("RatesNamespace") Namespace nameSpace)
+	public RateProvider(DataSource dataSource, 
+			@Named("RatesNamespace") Namespace nameSpace, 
+			FXQuoteProvider fxQuoteProvider, 
+			SubscriptionFactory subscriptionFactory, 
+			AuditLogger auditLogger)
 	{
+		this.fxQuoteProvider = fxQuoteProvider;
 		this.publisher = dataSource.createActivePublisher(nameSpace, this);
+		
+		this.subscriptionFactory = subscriptionFactory;
+		this.auditLogger = auditLogger;
 	}
 	
 	@Override
 	public void onDiscard(DiscardEvent discardEvent)
 	{
-		// TODO Auto-generated method stub
+		auditLogger.log("Received a request for: " + discardEvent.getSubject());
 	}
 
 	@Override
 	public void onRequest(RequestEvent requestEvent)
 	{
-		// TODO Auto-generated method stub
+		String subject = requestEvent.getSubject();
+		auditLogger.log("Received a request for: " + subject);
+		
+		String currencyPair = subject.split("/")[2];
+		Subscription subscription = subscriptionFactory.create(subject, publisher);
+		
+		fxQuoteProvider.subscribe(currencyPair, subscription);
 	}
 }
