@@ -38,7 +38,11 @@ public class FXQuoteProvider
 	{
 		Set<FXQuoteListener> listeners = currencyPairToFXQuoteListenersMap.get(currencyPair);
 		
-		if(listeners == null)
+		if(listeners != null)
+		{
+			listeners.add(listener);
+		}
+		else
 		{
 			listeners = new HashSet<FXQuoteListener>();
 			currencyPairToFXQuoteListenersMap.put(currencyPair, listeners);
@@ -62,10 +66,6 @@ public class FXQuoteProvider
     		
     		ScheduledFuture<?> taskHandle = scheduledExecutor.scheduleAtFixedRate(updateTask, 0, 2, TimeUnit.SECONDS);
     		currencyPairToTaskHandleMap.put(currencyPair, taskHandle);
-		}
-		else
-		{
-			listeners.add(listener);
 		}
 	}
 
