@@ -31,8 +31,6 @@ public class YahooQuoteService implements QuoteService
 		{
 			URL url = new URL("http://finance.yahoo.com/d/quotes.csv?s=" + currencyPair + "=X&f=sl1d1t1ba&e=.csv");
 			
-			auditLogger.log("Retrieving a quote from: " + url);
-			
 			InputStream stream = url.openStream();
 			List<String> lines = IOUtils.readLines(stream);
 			String[] tokens = lines.get(0).split(",");
