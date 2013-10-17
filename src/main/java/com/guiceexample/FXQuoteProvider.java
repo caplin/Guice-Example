@@ -3,9 +3,7 @@
  */
 package com.guiceexample;
 
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -14,12 +12,14 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.guiceexample.service.QuoteService;
 
 @Singleton
 public class FXQuoteProvider
 {
-	private final Map<String, Set<FXQuoteListener>> currencyPairToFXQuoteListenersMap = new ConcurrentHashMap<>();
+	private final Multimap<String, FXQuoteListener> currencyPairToFXQuoteListenersMap = HashMultimap.create();
 	private final Map<String, ScheduledFuture<?>> currencyPairToTaskHandleMap = new ConcurrentHashMap<>();
 	
 	private final QuoteService quoteService;
@@ -36,18 +36,10 @@ public class FXQuoteProvider
 	
 	public void subscribe(final String currencyPair, FXQuoteListener listener)
 	{
-		Set<FXQuoteListener> listeners = currencyPairToFXQuoteListenersMap.get(currencyPair);
-		
-		if(listeners != null)
+		currencyPairToFXQuoteListenersMap.put(currencyPair, listener);
+
+		if(currencyPairToFXQuoteListenersMap.get(currencyPair).size() == 1)
 		{
-			listeners.add(listener);
-		}
-		else
-		{
-			listeners = new HashSet<FXQuoteListener>();
-			listeners.add(listener);
-			currencyPairToFXQuoteListenersMap.put(currencyPair, listeners);
-		
     		Runnable updateTask = new Runnable()
     		{
     			@Override
@@ -71,16 +63,11 @@ public class FXQuoteProvider
 
 	public void unsubscribe(String currencyPair, FXQuoteListener listener)
 	{
-		Set<FXQuoteListener> subscriptions = currencyPairToFXQuoteListenersMap.get(currencyPair);
-		if(subscriptions != null)
+		currencyPairToFXQuoteListenersMap.remove(currencyPair, listener);
+		if(!currencyPairToFXQuoteListenersMap.containsKey(currencyPair))
 		{
-			subscriptions.remove(listener);
-			if(subscriptions.isEmpty())
-			{
-				currencyPairToFXQuoteListenersMap.remove(currencyPair);
-				ScheduledFuture<?> taskHandle = currencyPairToTaskHandleMap.get(currencyPair);
-				taskHandle.cancel(false);
-			}
+			ScheduledFuture<?> taskHandle = currencyPairToTaskHandleMap.get(currencyPair);
+			taskHandle.cancel(false);
 		}
 	}
 }
