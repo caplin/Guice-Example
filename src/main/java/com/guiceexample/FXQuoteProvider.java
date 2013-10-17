@@ -45,8 +45,8 @@ public class FXQuoteProvider
 		else
 		{
 			listeners = new HashSet<FXQuoteListener>();
-			currencyPairToFXQuoteListenersMap.put(currencyPair, listeners);
 			listeners.add(listener);
+			currencyPairToFXQuoteListenersMap.put(currencyPair, listeners);
 		
     		Runnable updateTask = new Runnable()
     		{
@@ -57,9 +57,9 @@ public class FXQuoteProvider
     				
     				Quote quote = quoteBuilder.createQuote(currencyPair, midPrice);
     				
-    				for(FXQuoteListener subscription : currencyPairToFXQuoteListenersMap.get(currencyPair))
+    				for(FXQuoteListener listener : currencyPairToFXQuoteListenersMap.get(currencyPair))
     				{
-    					subscription.onQuote(currencyPair, quote);
+    					listener.onQuote(currencyPair, quote);
     				}
     			}
     		};
