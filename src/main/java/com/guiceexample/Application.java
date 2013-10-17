@@ -8,18 +8,15 @@ import javax.inject.Singleton;
 
 import com.caplin.datasource.ConnectionListener;
 import com.caplin.datasource.DataSource;
-import com.caplin.datasource.publisher.DataProvider;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.guiceexample.injection.MyModule;
-import com.guiceexample.util.AuditLogger;
 
 @Singleton
-public class Application implements FXQuoteListener
+public class Application
 {
-	private final FXQuoteProvider quoteProvider;
-	private final AuditLogger auditLogger;
 	private final DataSource dataSource;
+	private final ConnectionListener connectionListener;
 	
 	public static void main(String[] args)
 	{
@@ -29,24 +26,15 @@ public class Application implements FXQuoteListener
 	}
 	
 	@Inject
-	public Application(DataSource dataSource, FXQuoteProvider quoteProvider, ConnectionListener connectionListener, AuditLogger auditLogger)
+	public Application(DataSource dataSource, ConnectionListener connectionListener)
 	{
 		this.dataSource = dataSource;
-		this.quoteProvider = quoteProvider;
-		this.auditLogger = auditLogger;
-		
-		dataSource.addConnectionListener(connectionListener);
+		this.connectionListener = connectionListener;
 	}
 	
 	public void start()
 	{
+		dataSource.addConnectionListener(connectionListener);
 		dataSource.start();
-	}
-
-	@Override
-	public void onQuote(String currencyPair, Quote quote)
-	{
-		String logMessage = "Received a quote for " + currencyPair + ": " + quote.getBid() + "/" + quote.getAsk();
-		auditLogger.log(logMessage);
 	}
 }
