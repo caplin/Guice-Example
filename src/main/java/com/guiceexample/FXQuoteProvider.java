@@ -34,7 +34,7 @@ public class FXQuoteProvider
 		this.quoteBuilder = quoteBuilder;
 	}
 	
-	public void subscribe(final String currencyPair, FXQuoteListener subscription)
+	public void subscribe(final String currencyPair, FXQuoteListener listener)
 	{
 		Set<FXQuoteListener> listeners = currencyPairToFXQuoteListenersMap.get(currencyPair);
 		
@@ -42,7 +42,7 @@ public class FXQuoteProvider
 		{
 			listeners = new HashSet<FXQuoteListener>();
 			currencyPairToFXQuoteListenersMap.put(currencyPair, listeners);
-			listeners.add(subscription);
+			listeners.add(listener);
 		
     		Runnable updateTask = new Runnable()
     		{
@@ -65,7 +65,7 @@ public class FXQuoteProvider
 		}
 		else
 		{
-			listeners.add(subscription);
+			listeners.add(listener);
 		}
 	}
 
