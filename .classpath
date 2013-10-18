@@ -19,7 +19,6 @@
 	<classpathentry kind="lib" path="Blade/DataSource/lib/guice-throwingproviders-3.0.jar"/>
 	<classpathentry kind="lib" path="Blade/DataSource/lib/javax.inject.jar"/>
 	<classpathentry kind="lib" path="Blade/DataSource/lib/mockito-all-1.9.5.jar"/>
-	<classpathentry kind="lib" path="Blade/DataSource/lib/datasource-java-6.0.4-268745.jar"/>
 	<classpathentry kind="lib" path="Blade/DataSource/lib/datasrc-api-6.0.0-267956.jar"/>
 	<classpathentry kind="lib" path="Blade/DataSource/lib/logging-util-5.0.0.jar"/>
 	<classpathentry kind="lib" path="Blade/DataSource/lib/common-util-5.0.4.jar"/>
