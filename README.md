@@ -5,6 +5,8 @@ This Java application begins as a simple utility that retrieves FX quotes from Y
 
 The application is used to illustrate the ideas discussed in the Powerpoint presentation at the root of the project.
 
+*Please note, from tag 2.0 onwards you'll need to copy a version of the datasource-java jar into the Blade/DataSource/lib directory of the DataSource and add it to your classpath. This tutorial was done with version datasource-java-6.0.4-268745.jar.*
+
 Guice features covered:
 
 * Standard binding
