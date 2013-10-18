@@ -14,6 +14,7 @@ import com.caplin.datasource.DataSourceFactory;
 import com.caplin.datasource.namespace.Namespace;
 import com.caplin.datasource.namespace.RegexNamespace;
 import com.caplin.datasource.publisher.DataProvider;
+import com.google.common.eventbus.EventBus;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
@@ -52,6 +53,8 @@ public class MyModule extends AbstractModule
 		bind(DataProvider.class)
 			.to(RateProvider.class)
 			.asEagerSingleton();
+		
+		bind(EventBus.class).toInstance(new EventBus());
 	}
 	
 	@Provides

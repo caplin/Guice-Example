@@ -15,6 +15,9 @@ import com.caplin.datasource.publisher.ActivePublisher;
 import com.caplin.datasource.publisher.DataProvider;
 import com.caplin.datasource.publisher.DiscardEvent;
 import com.caplin.datasource.publisher.RequestEvent;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.eventbus.EventBus;
 import com.google.inject.name.Named;
 import com.guiceexample.FXQuoteProvider;
 import com.guiceexample.injection.SubscriptionFactory;
@@ -23,21 +26,25 @@ import com.guiceexample.util.AuditLogger;
 @Singleton
 public class RateProvider implements DataProvider
 {
+	private final Multimap<String, Subscription> currencyPairToSubscriptionMap = HashMultimap.create();
 	private final Map<String, Subscription> subjectToSubscriptionMap = new ConcurrentHashMap<>();
 	
 	private final ActivePublisher publisher;
 	private final FXQuoteProvider fxQuoteProvider;
 	private final SubscriptionFactory subscriptionFactory;
 	private final AuditLogger auditLogger;
+	private final EventBus eventBus;
 
 	@Inject
 	public RateProvider(DataSource dataSource, 
 			@Named("RatesNamespace") Namespace nameSpace, 
 			FXQuoteProvider fxQuoteProvider, 
 			SubscriptionFactory subscriptionFactory, 
-			AuditLogger auditLogger)
+			AuditLogger auditLogger,
+			EventBus eventBus)
 	{
 		this.fxQuoteProvider = fxQuoteProvider;
+		this.eventBus = eventBus;
 		this.publisher = dataSource.createActivePublisher(nameSpace, this);
 		
 		this.subscriptionFactory = subscriptionFactory;
@@ -49,12 +56,15 @@ public class RateProvider implements DataProvider
 	{
 		String subject = requestEvent.getSubject();
 		auditLogger.log("Received a request for: " + subject);
+		String currencyPair = getCurrencyPairFrom(subject);
 		
-		String currencyPair = subject.split("/")[2];
 		Subscription subscription = subscriptionFactory.create(subject, publisher);
-		subjectToSubscriptionMap.put(subject, subscription);
+		eventBus.register(subscription);
 		
-		fxQuoteProvider.subscribe(currencyPair, subscription);
+		subjectToSubscriptionMap.put(subject, subscription);
+		currencyPairToSubscriptionMap.put(currencyPair, subscription);
+		
+		fxQuoteProvider.subscribe(currencyPair);
 	}
 	
 	@Override
@@ -62,8 +72,20 @@ public class RateProvider implements DataProvider
 	{
 		String subject = discardEvent.getSubject();
 		auditLogger.log("Received a discard for: " + subject);
+		String currencyPair = getCurrencyPairFrom(subject);
 		
-		Subscription subscription = subjectToSubscriptionMap.get(subject);
-		fxQuoteProvider.unsubscribe(subscription.getCurrencyPair(), subscription);
+		Subscription subscription = subjectToSubscriptionMap.remove(subject);
+		eventBus.unregister(subscription);
+
+		currencyPairToSubscriptionMap.remove(currencyPair, subscription);
+		if(!currencyPairToSubscriptionMap.containsKey(currencyPair))
+		{
+			fxQuoteProvider.unsubscribe(currencyPair);
+		}
+	}
+	
+	private String getCurrencyPairFrom(String subject)
+	{
+		return subject.split("/")[2];
 	}
 }

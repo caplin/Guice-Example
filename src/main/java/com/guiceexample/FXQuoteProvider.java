@@ -3,7 +3,9 @@
  */
 package com.guiceexample;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -12,34 +14,38 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.eventbus.EventBus;
 import com.guiceexample.service.QuoteService;
 
 @Singleton
 public class FXQuoteProvider
 {
-	private final Multimap<String, FXQuoteListener> currencyPairToFXQuoteListenersMap = HashMultimap.create();
+	private final Set<String> subscribedCurrencyPairs = new HashSet<String>();
 	private final Map<String, ScheduledFuture<?>> currencyPairToTaskHandleMap = new ConcurrentHashMap<>();
 	
 	private final QuoteService quoteService;
 	private final ScheduledExecutorService scheduledExecutor;
 	private final QuoteBuilder quoteBuilder;
+	private final EventBus eventBus;
 	
 	@Inject
-	public FXQuoteProvider(QuoteService quoteService, ScheduledExecutorService scheduledExecutor, QuoteBuilder quoteBuilder)
+	public FXQuoteProvider(QuoteService quoteService, 
+			ScheduledExecutorService scheduledExecutor, 
+			QuoteBuilder quoteBuilder,
+			EventBus eventBus)
 	{
 		this.quoteService = quoteService;
 		this.scheduledExecutor = scheduledExecutor;
 		this.quoteBuilder = quoteBuilder;
+		this.eventBus = eventBus;
 	}
 	
-	public void subscribe(final String currencyPair, FXQuoteListener listener)
+	public void subscribe(final String currencyPair)
 	{
-		currencyPairToFXQuoteListenersMap.put(currencyPair, listener);
-
-		if(currencyPairToFXQuoteListenersMap.get(currencyPair).size() == 1)
+		if(!subscribedCurrencyPairs.contains(currencyPair))
 		{
+			subscribedCurrencyPairs.add(currencyPair);
+			
     		Runnable updateTask = new Runnable()
     		{
     			@Override
@@ -48,11 +54,7 @@ public class FXQuoteProvider
     				double midPrice = quoteService.getMidPrice(currencyPair);
     				
     				Quote quote = quoteBuilder.createQuote(currencyPair, midPrice);
-    				
-    				for(FXQuoteListener listener : currencyPairToFXQuoteListenersMap.get(currencyPair))
-    				{
-    					listener.onQuote(currencyPair, quote);
-    				}
+    				eventBus.post(quote);
     			}
     		};
     		
@@ -61,13 +63,11 @@ public class FXQuoteProvider
 		}
 	}
 
-	public void unsubscribe(String currencyPair, FXQuoteListener listener)
+	public void unsubscribe(String currencyPair)
 	{
-		currencyPairToFXQuoteListenersMap.remove(currencyPair, listener);
-		if(!currencyPairToFXQuoteListenersMap.containsKey(currencyPair))
-		{
-			ScheduledFuture<?> taskHandle = currencyPairToTaskHandleMap.get(currencyPair);
-			taskHandle.cancel(false);
-		}
+		subscribedCurrencyPairs.remove(currencyPair);
+		
+		ScheduledFuture<?> taskHandle = currencyPairToTaskHandleMap.get(currencyPair);
+		taskHandle.cancel(false);
 	}
 }
